@@ -1,7 +1,4 @@
-// ignore_for_file: lines_longer_than_80_chars
-
 import 'package:dynamic_timeline/dynamic_timeline.dart';
-import 'package:dynamic_timeline/src/rendering/render_timeline_item.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -24,11 +21,7 @@ void main() {
       return DynamicTimeline(
         firstDateTime: DateTime(1970, 1, 1, 8),
         lastDateTime: DateTime(1970, 1, 1, 12),
-        labelBuilder: LabelBuilder(
-          builder: (labelDate) {
-            return const Text('date');
-          },
-        ),
+        labelBuilder: (_) => 'Date',
         axis: axis,
         intervalDuration: const Duration(hours: 1),
         crossAxisCount: 2,

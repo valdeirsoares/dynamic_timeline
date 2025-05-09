@@ -1,13 +1,9 @@
-// ignore_for_file: flutter_style_todos, lines_longer_than_80_chars
+// ignore_for_file: avoid_redundant_argument_values
 
 import 'package:dynamic_timeline/dynamic_timeline.dart';
-import 'package:dynamic_timeline/src/rendering/painter/interval_painter/background_painter_data.dart';
-import 'package:dynamic_timeline/src/rendering/painter/interval_painter/interval_painter.dart';
-import 'package:dynamic_timeline/src/rendering/render_dynamic_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shouldly/shouldly.dart';
-import '../helpers/dummy_stateful_wrapper.dart';
+
 import '../helpers/helpers.dart';
 
 void main() {
@@ -33,7 +29,7 @@ void main() {
       DateTime? lastDateTime,
       String? Function(DateTime)? labelBuilder,
       Axis axis = Axis.vertical,
-      Duration? intervalDuration = const Duration(hours: 1),
+      Duration intervalDuration = const Duration(hours: 1),
       double intervalExtent = 100,
       int crossAxisCount = 2,
       double maxCrossAxisIndicatorExtent = 60,
@@ -45,18 +41,13 @@ void main() {
       StrokeCap strokeCap = StrokeCap.round,
       bool resizable = true,
       Paint? paint,
-      List<IntervalPainter> intervalPainters = const [],
       TextStyle? textStyle,
       List<TimelineItem>? items,
     }) {
       return DynamicTimeline(
         firstDateTime: firstDateTime ?? DateTime(1970, 1, 1, 8),
         lastDateTime: lastDateTime ?? DateTime(1970, 1, 1, 12),
-        labelBuilder: LabelBuilder(
-          builder: (labelDate) {
-            return const Text('date');
-          },
-        ),
+        labelBuilder: labelBuilder ?? (_) => 'Date',
         axis: axis,
         intervalDuration: intervalDuration,
         intervalExtent: intervalExtent,
@@ -69,7 +60,6 @@ void main() {
         strokeWidth: strokeWidth,
         strokeCap: strokeCap,
         resizable: resizable,
-        intervalPainters: intervalPainters,
         paint: paint,
         textStyle: textStyle,
         items: items ?? mockItems,
@@ -98,6 +88,7 @@ void main() {
 
         expect(renderDynamicTimeline.firstDateTime, DateTime(1970, 1, 1, 8));
         expect(renderDynamicTimeline.lastDateTime, DateTime(1970, 1, 1, 12));
+        expect(renderDynamicTimeline.labelBuilder, labelBuilder);
         expect(renderDynamicTimeline.axis, Axis.vertical);
         expect(
           renderDynamicTimeline.intervalDuration,
@@ -116,22 +107,8 @@ void main() {
       });
 
       group('defaults', () {
-        testWidgets('intervalDuration takes 1/20 of the total', (tester) async {
-          await tester.pumpApp(buildSubject(intervalDuration: null));
-
-          final renderDynamicTimeline =
-              tester.renderObject<RenderDynamicTimeline>(
-            find.byType(DynamicTimeline),
-          );
-
-          expect(
-            renderDynamicTimeline.minItemDuration,
-            const Duration(hours: 4) ~/ 20,
-          );
-        });
-
         testWidgets('minItemDuration takes 1/20 of the total', (tester) async {
-          await tester.pumpApp(buildSubject());
+          await tester.pumpApp(buildSubject(minItemDuration: null));
 
           final renderDynamicTimeline =
               tester.renderObject<RenderDynamicTimeline>(
@@ -146,7 +123,7 @@ void main() {
 
         testWidgets('linePaint uses the given color, stroke width and cap',
             (tester) async {
-          await tester.pumpApp(buildSubject());
+          await tester.pumpApp(buildSubject(paint: null));
           final renderDynamicTimeline =
               tester.renderObject<RenderDynamicTimeline>(
             find.byType(DynamicTimeline),
@@ -159,7 +136,7 @@ void main() {
 
         testWidgets('labelTextStyle uses textTheme bodyText1', (tester) async {
           await tester.pumpApp(
-            buildSubject(),
+            buildSubject(textStyle: null),
           );
           final renderDynamicTimeline =
               tester.renderObject<RenderDynamicTimeline>(
@@ -170,7 +147,7 @@ void main() {
 
           expect(
             renderDynamicTimeline.labelTextStyle,
-            Theme.of(element).textTheme.bodyLarge,
+            Theme.of(element).textTheme.bodyText1,
           );
         });
       });
@@ -225,11 +202,9 @@ void main() {
         find.byType(DynamicTimeline),
       );
 
-      // TODO: form most complex types e.g. the tests are cheching it the
-      // TODO: objects are the same, which is not the same as checking if the
-      // TODO: they are equal!!
       expect(widget.firstDateTime, firstDateTime);
       expect(widget.lastDateTime, lastDateTime);
+      expect(widget.labelBuilder, labelBuilder);
       expect(widget.axis, axis);
       expect(widget.intervalDuration, intervalDuration);
       expect(widget.crossAxisCount, crossAxisCount);
@@ -242,9 +217,7 @@ void main() {
       expect(widget.resizable, resizable);
       expect(widget.paint, paint);
       expect(widget.textStyle, textStyle);
-      for (final item in items) {
-        expect(widget.children.contains(item), true);
-      }
+      expect(widget.children, items);
     });
 
     group('renderObject', () {
@@ -358,90 +331,6 @@ void main() {
         expect(renderObject.getMaxIntrinsicHeight(100), 400);
         expect(renderObject.getMinIntrinsicHeight(100), 400);
       });
-
-      //Bugfix: Missing layout information for background painter after "setState" call
-      testWidgets(
-          'Measuring the amount auf paint calls before and after set state '
-          '--> Should be same amount of calls', (tester) async {
-        final mockPainter = _MockIntervalPainter();
-        await tester.pumpApp(
-          DummyStatefulWrapper(
-            builder: () => buildSubject(intervalPainters: [mockPainter]),
-          ),
-        );
-
-        final callsBeforeSetState = mockPainter.timesPaintCalled;
-        mockPainter.timesPaintCalled = 0;
-
-        // ignore: invalid_use_of_protected_member
-        tester.state(find.byType(DummyStatefulWrapper)).setState(() {});
-
-        await tester.pump();
-        final callsAfterSetState = mockPainter.timesPaintCalled;
-        callsBeforeSetState.should.beGreaterThan(0);
-        callsAfterSetState.should.be(callsBeforeSetState);
-      });
-
-      testWidgets(
-          'Measuring the amount auf layout after set state with a new painter list '
-          '--> Should be called at least once', (tester) async {
-        final mockPainter = _MockIntervalPainter();
-        await tester.pumpApp(
-          DummyStatefulWrapper(
-            builder: () => buildSubject(intervalPainters: [mockPainter]),
-          ),
-        );
-
-        mockPainter.timesSetLayoutCalled = 0;
-
-        // ignore: invalid_use_of_protected_member
-        tester.state(find.byType(DummyStatefulWrapper)).setState(() {});
-
-        await tester.pump();
-        mockPainter.timesSetLayoutCalled.should.beGreaterOrEqualThan(1);
-      });
-
-      testWidgets(
-          'Measuring the amount auf layout after set state with a old painter list '
-          '--> Should not be called', (tester) async {
-        final mockPainter = _MockIntervalPainter();
-        final painters = [mockPainter];
-        await tester.pumpApp(
-          DummyStatefulWrapper(
-            builder: () => buildSubject(intervalPainters: painters),
-          ),
-        );
-
-        mockPainter.timesSetLayoutCalled = 0;
-
-        // ignore: invalid_use_of_protected_member
-        tester.state(find.byType(DummyStatefulWrapper)).setState(() {});
-
-        await tester.pump();
-        mockPainter.timesSetLayoutCalled.should.be(0);
-      });
     });
   });
-}
-
-class _MockIntervalPainter extends IntervalPainter {
-  _MockIntervalPainter()
-      : super(
-          drawingAxis: Axis.vertical,
-          intervalSelector: (interval) => true,
-        );
-
-  int timesPaintCalled = 0;
-  int timesSetLayoutCalled = 0;
-
-  @override
-  void setLayout({required BackgroundPainterData data}) {
-    super.setLayout(data: data);
-    timesSetLayoutCalled++;
-  }
-
-  @override
-  void paintCallback(Canvas canvas, Rect drawingRegion, int intervalIdx) {
-    timesPaintCalled++;
-  }
 }

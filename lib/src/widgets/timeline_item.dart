@@ -1,5 +1,4 @@
 import 'package:dynamic_timeline/dynamic_timeline.dart';
-import 'package:dynamic_timeline/src/rendering/render_timeline_item.dart';
 import 'package:flutter/widgets.dart';
 
 /// {@template timeline_item}
@@ -9,20 +8,21 @@ import 'package:flutter/widgets.dart';
 class TimelineItem extends SingleChildRenderObjectWidget {
   /// {@macro timeline_item}
   TimelineItem({
+    Key? key,
     required this.startDateTime,
     required this.endDateTime,
-    required Widget super.child,
-    super.key,
     this.position = 0,
     this.onStartDateTimeChanged,
     this.onEndDateTimeChanged,
     this.onStartDateTimeUpdated,
     this.onEndDateTimeUpdated,
-  }) : assert(
+    required Widget child,
+  })  : assert(
           startDateTime.isBefore(endDateTime),
           'startDateTime must be before endDateTime: '
           'starDateTime: $startDateTime --- endDateTime: $endDateTime',
-        );
+        ),
+        super(key: key, child: child);
 
   /// The start date time of the event.
   ///
